@@ -82,7 +82,9 @@ namespace UglyToad.WiseOak
                 return new DecisionTree(null);
             }
 
-            var root = SplitRecursive(classListIndexes, numberOfDimensions, isActive, data, classes, maximumDepth, 0);
+            var decisions = new List<(DecisionHolder, bool)>();
+
+            var root = SplitRecursive(classListIndexes, numberOfDimensions, isActive, data, classes, maximumDepth, 0, decisions);
 
             return new DecisionTree(root);
         }
@@ -93,11 +95,34 @@ namespace UglyToad.WiseOak
             double[][] data,
             int[] classes,
             uint? maximumDepth,
-            int currentDepth)
+            int currentDepth,
+            List<(DecisionHolder decision, bool takeLeft)> previousDecisions)
         {
             if (maximumDepth.HasValue && currentDepth >= maximumDepth)
             {
                 return null;
+            }
+
+            if (previousDecisions.Count > 0)
+            {
+                for (var i = 0; i < isRecordActive.Length; i++)
+                {
+                    var record = data[i];
+
+                    for (var j = 0; j < previousDecisions.Count; j++)
+                    {
+                        var (decision, takeLeft) = previousDecisions[j];
+                        var value = record[decision.DimensionIndex];
+                        var isActive = takeLeft ? (value <= decision.SplitAt) : (value > decision.SplitAt);
+                        if (!isActive)
+                        {
+                            isRecordActive[i] = false;
+                            break;
+                        }
+
+                        isRecordActive[i] = true;
+                    }
+                }
             }
 
             var result = NodeSplitter.Split(classListIndices, numberOfDimensions, isRecordActive, data, classes);
@@ -114,23 +139,19 @@ namespace UglyToad.WiseOak
 
             var thisDecision = result.Value;
 
-            for (var i = 0; i < isRecordActive.Length; i++)
+            var nextLeft = new List<(DecisionHolder, bool takeLeft)>(previousDecisions)
             {
-                var record = data[i];
-                var value = record[thisDecision.DimensionIndex];
-                isRecordActive[i] = value <= thisDecision.SplitAt;
-            }
+                (thisDecision, true)
+            };
 
-            var left = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, maximumDepth, currentDepth + 1);
+            var left = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, maximumDepth, currentDepth + 1, nextLeft);
 
-            for (var i = 0; i < isRecordActive.Length; i++)
+            var nextRight = new List<(DecisionHolder, bool)>(previousDecisions)
             {
-                var record = data[i];
-                var value = record[thisDecision.DimensionIndex];
-                isRecordActive[i] = value > thisDecision.SplitAt;
-            }
+                (thisDecision, false)
+            };
 
-            var right = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, maximumDepth, currentDepth + 1);
+            var right = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, maximumDepth, currentDepth + 1, nextRight);
 
             return new DecisionTreeNode(thisDecision.SplitAt, thisDecision.Score, thisDecision.DimensionIndex, thisDecision.LeftClass, thisDecision.RightClass, left, right);
         }

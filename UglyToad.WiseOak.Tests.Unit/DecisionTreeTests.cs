@@ -5,6 +5,40 @@ namespace UglyToad.WiseOak.Tests.Unit
     public class DecisionTreeTests
     {
         [Fact]
+        public void Build4dDataSet()
+        {
+            var data = new[]
+            {
+                new double []{ 1, 2, 2, 1 },
+                new double []{ 1, 2, 3, 2 },
+                new double []{ 1, 2, 2, 3 },
+                new double []{ 2, 2, 2, 1 },
+                new double []{ 2, 3, 2, 2 },
+
+                new double []{ 1, 3, 2, 1 },
+                new double []{ 1, 2, 3, 1 },
+                new double []{ 2, 3, 1, 2 },
+                new double []{ 1, 2, 2, 2 },
+                new double []{ 1, 1, 3, 2 },
+
+                new double []{ 2, 1, 2, 2 },
+                new double []{ 1, 1, 2, 3 }
+            };
+
+            var classes = new[]
+            {
+                1, 1, 1, 1, 2,
+                1, 2, 1, 1, 1,
+                2, 1
+            };
+
+            var tree = DecisionTree.Build(data, classes);
+
+            Assert.NotNull(tree);
+            Assert.NotNull(tree.Root);
+        }
+
+        [Fact]
         public void Build2dDataSet()
         {
             // Built by estimating from the sample set in https://victorzhou.com/blog/gini-impurity/#picking-the-best-split
@@ -12,7 +46,7 @@ namespace UglyToad.WiseOak.Tests.Unit
             {
                 // Class 1
                 new []{ 0.2, 1.5 },
-                new []{ 0.5, 0.2},
+                new []{ 0.5, 0.2 },
                 new []{ 0.6, 1.2 },
                 new []{ 1.0, 2.3 },
                 new []{ 1.8, 0.3 },
