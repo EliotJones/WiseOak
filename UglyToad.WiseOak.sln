@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UglyToad.WiseOak", "UglyToad.WiseOak\UglyToad.WiseOak.csproj", "{315F37C7-87AC-415B-AE8C-01090ABC9FBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UglyToad.WiseOak.Tests.Unit", "UglyToad.WiseOak.Tests.Unit\UglyToad.WiseOak.Tests.Unit.csproj", "{66749D21-FC97-4D1B-96D0-E72610AC36B7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{315F37C7-87AC-415B-AE8C-01090ABC9FBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{315F37C7-87AC-415B-AE8C-01090ABC9FBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{315F37C7-87AC-415B-AE8C-01090ABC9FBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{315F37C7-87AC-415B-AE8C-01090ABC9FBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66749D21-FC97-4D1B-96D0-E72610AC36B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66749D21-FC97-4D1B-96D0-E72610AC36B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66749D21-FC97-4D1B-96D0-E72610AC36B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66749D21-FC97-4D1B-96D0-E72610AC36B7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {65042976-EBF7-4284-8172-1D87A8035CE0}
+	EndGlobalSection
+EndGlobal
