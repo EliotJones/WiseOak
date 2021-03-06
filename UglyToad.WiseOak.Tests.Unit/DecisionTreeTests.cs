@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using CsvSwan;
 using Xunit;
 
 namespace UglyToad.WiseOak.Tests.Unit
@@ -80,6 +83,47 @@ namespace UglyToad.WiseOak.Tests.Unit
 
             Assert.Equal(1, predictionA);
             Assert.Equal(2, predictionB);
+        }
+
+        [Fact]
+        public void IngestData()
+        {
+            const string path = @"C:\git\csharp\UglyToad.WiseOak\datasets\bank-additional-full.csv";
+
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            using (var csv = Csv.Open(path, separator: ';', hasHeaderRow: true))
+            {
+                var rvs = csv.GetAllRowValues();
+
+                var data = new double[rvs.Count][];
+                var classes = new int[rvs.Count];
+
+                for (var i = 0; i < data.Length; i++)
+                {
+                    data[i] = new double[rvs[0].Count - 1];
+                }
+
+                for (var row = 0; row < rvs.Count; row++)
+                {
+                    var rowValues = rvs[row];
+                    for (int i = 0; i < rowValues.Count - 1; i++)
+                    {
+                        var value = rowValues[i];
+                        if (double.TryParse(value, out var d))
+                        {
+                            data[row][i] = d;
+                        }
+                    }
+
+                    classes[row] = string.Equals("yes", rowValues[rvs[0].Count - 1], StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                }
+
+                var tree = DecisionTree.Build(data, classes, 7);
+            }
         }
     }
 }
