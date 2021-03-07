@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using CsvSwan;
 using Xunit;
@@ -107,6 +108,8 @@ namespace UglyToad.WiseOak.Tests.Unit
                     data[i] = new double[rvs[0].Count - 1];
                 }
 
+                var enumLookup = new Dictionary<int, Dictionary<string, int>>();
+
                 for (var row = 0; row < rvs.Count; row++)
                 {
                     var rowValues = rvs[row];
@@ -117,12 +120,52 @@ namespace UglyToad.WiseOak.Tests.Unit
                         {
                             data[row][i] = d;
                         }
+                        else
+                        {
+                            if (!enumLookup.TryGetValue(i, out var enumMap))
+                            {
+                                enumMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                                enumLookup[i] = enumMap;
+                            }
+
+                            if (!enumMap.TryGetValue(value, out var val))
+                            {
+                                val = enumMap.Count;
+                                enumMap[value] = val;
+                            }
+
+                            data[row][i] = val;
+                        }
                     }
 
                     classes[row] = string.Equals("yes", rowValues[rvs[0].Count - 1], StringComparison.OrdinalIgnoreCase) ? 1 : 0;
                 }
 
-                var tree = DecisionTree.Build(data, classes, 7);
+                var tree = DecisionTree.Build(data, classes, 9);
+
+                Assert.NotNull(tree);
+                Assert.NotNull(tree.Root);
+
+                var match = 0;
+                var miss = 0;
+                for (var i = 0; i < data.Length; i++)
+                {
+                    var prediction = tree.Predict(data[i]);
+                    var actual = classes[i];
+
+                    if (prediction == actual)
+                    {
+                        match++;
+                    }
+                    else
+                    {
+                        miss++;
+                    }
+                }
+
+                var accuracy = (match / (double) (match + miss)) * 100;
+
+                Assert.True(accuracy > 90, $"Accuracy was lower than 90% for this data set. Value was {accuracy}%.");
             }
         }
     }
