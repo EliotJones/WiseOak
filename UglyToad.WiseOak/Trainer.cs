@@ -103,6 +103,8 @@ namespace UglyToad.WiseOak
                 options = new Options();
             }
 
+            var random = new Random(options.RandomSeed);
+
             var outputLog = options.OutputLogAction ?? (s => Trace.WriteLine(s));
 
             var maxDepth = data[0].Length + 1;
@@ -125,7 +127,7 @@ namespace UglyToad.WiseOak
 
                     var accuraciesLocal = new List<double>(options.NumberOfFolds);
 
-                    foreach (var fold in CrossValidationFoldFactory.Get(data, classes, options.NumberOfFolds))
+                    foreach (var fold in CrossValidationFoldFactory.Get(data, classes, options.NumberOfFolds, random))
                     {
                         outputLog($"   D{depth} - Train fold {accuraciesLocal.Count + 1} of {options.NumberOfFolds}.");
 
@@ -192,12 +194,14 @@ namespace UglyToad.WiseOak
             public int NumberOfFolds { get; set; } = 10;
 
             public int DegreeOfParallelism { get; set; } = 1;
+
+            public int RandomSeed { get; set; } = 164562;
         }
     }
 
     internal class CrossValidationFoldFactory
     {
-        public static IEnumerable<Fold> Get(double[][] data, int[] classes, int numberOfFolds)
+        public static IEnumerable<Fold> Get(double[][] data, int[] classes, int numberOfFolds, Random random)
         {
             if (numberOfFolds <= 0)
             {
@@ -212,7 +216,40 @@ namespace UglyToad.WiseOak
 
             var sizeOfFold = data.Length / numberOfFolds;
 
+            var foldIndices = new int[data.Length];
+            var remainingFoldAllocations = new List<FoldAllocation>(numberOfFolds);
+
+            for (var i = 0; i < numberOfFolds; i++)
+            {
+                remainingFoldAllocations.Add(new FoldAllocation
+                {
+                    FoldIndex = i,
+                    NumberRemaining = sizeOfFold
+                });
+            }
+
+            for (var i = 0; i < data.Length; i++)
+            {
+                if (remainingFoldAllocations.Count == 0)
+                {
+                    // Lost data.Length - i data points.
+                    break;
+                }
+
+                var allocationIndex = random.Next(0, remainingFoldAllocations.Count);
+                var allocation = remainingFoldAllocations[allocationIndex];
+                foldIndices[i] = allocation.FoldIndex;
+
+                allocation.NumberRemaining--;
+
+                if (allocation.NumberRemaining == 0)
+                {
+                    remainingFoldAllocations.Remove(allocation);
+                }
+            }
+
             var results = new ConcurrentBag<Fold>();
+
             Parallel.For(
                 0,
                 numberOfFolds,
@@ -221,18 +258,15 @@ namespace UglyToad.WiseOak
                     var trainData = new double[sizeOfFold * (numberOfFolds - 1)][];
                     var trainClasses = new int[trainData.Length];
 
-                    var testData = new double[data.Length - trainData.Length][];
+                    var testData = new double[sizeOfFold][];
                     var testClasses = new int[testData.Length];
-
-                    var skip = (sizeOfFold * i);
-                    var take = testData.Length;
 
                     var testIndex = 0;
                     var trainIndex = 0;
 
-                    for (var j = 0; j < data.Length; j++)
+                    for (var j = 0; j < sizeOfFold * numberOfFolds; j++)
                     {
-                        if (j >= skip && j < skip + take)
+                        if (foldIndices[j] == i)
                         {
                             var myIndex = testIndex;
                             testData[myIndex] = data[j];
@@ -255,6 +289,13 @@ namespace UglyToad.WiseOak
             {
                 yield return result;
             }
+        }
+
+        private class FoldAllocation
+        {
+            public int NumberRemaining { get; set; }
+
+            public int FoldIndex { get; set; }
         }
 
         public class Fold
