@@ -20,7 +20,7 @@ namespace UglyToad.WiseOak
             {
                 return DecisionTree.Empty;
             }
-            
+
             var enumLookup = new Dictionary<int, Dictionary<string, int>>();
 
             var recordLength = rawData[0].Count;
@@ -78,7 +78,7 @@ namespace UglyToad.WiseOak
 
                     if (colIndex == classIndex)
                     {
-                        classes[rowIndex] = (int) doubleValue;
+                        classes[rowIndex] = (int)doubleValue;
                         continue;
                     }
 
@@ -107,7 +107,9 @@ namespace UglyToad.WiseOak
 
             var outputLog = options.OutputLogAction ?? (s => Trace.WriteLine(s));
 
-            var maxDepth = data[0].Length + 1;
+            var maxDepth = options.MaximumDepthToCheck.HasValue && options.MaximumDepthToCheck.Value > 0 ?
+                options.MaximumDepthToCheck.Value
+                : data[0].Length;
 
             var bestDepth = 1;
             var bestAccuracy = new double?();
@@ -116,7 +118,7 @@ namespace UglyToad.WiseOak
 
             Parallel.For(
                 1,
-                maxDepth,
+                maxDepth + 1,
                 new ParallelOptions
                 {
                     MaxDegreeOfParallelism = options.DegreeOfParallelism
@@ -136,7 +138,8 @@ namespace UglyToad.WiseOak
                             fold.TrainClasses,
                             new DecisionTree.Options
                             {
-                                MaxDepth = (uint) depth
+                                MaxDepth = (uint)depth,
+                                DegreeOfParalellism = options.DegreeOfParallelism
                             });
 
                         var wrong = 0;
@@ -153,7 +156,7 @@ namespace UglyToad.WiseOak
                             }
                         }
 
-                        var accuracyOnFold = (fold.TestClasses.Length - wrong) / (double) fold.TestClasses.Length;
+                        var accuracyOnFold = (fold.TestClasses.Length - wrong) / (double)fold.TestClasses.Length;
 
                         outputLog($"      D{depth} - Accuracy was: {accuracyOnFold}.");
 
@@ -179,7 +182,8 @@ namespace UglyToad.WiseOak
 
             return DecisionTree.Build(data, classes, new DecisionTree.Options
             {
-                MaxDepth = (uint)bestDepth
+                MaxDepth = (uint)bestDepth,
+                DegreeOfParalellism = options.DegreeOfParallelism
             });
         }
 
@@ -196,6 +200,8 @@ namespace UglyToad.WiseOak
             public int DegreeOfParallelism { get; set; } = 1;
 
             public int RandomSeed { get; set; } = 164562;
+
+            public int? MaximumDepthToCheck { get; set; }
         }
     }
 

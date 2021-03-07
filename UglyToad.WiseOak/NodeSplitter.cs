@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace UglyToad.WiseOak
 {
@@ -11,24 +12,57 @@ namespace UglyToad.WiseOak
             bool[] isRecordActive,
             double[][] data,
             int[] classes,
-            bool[]? featureMask)
+            bool[]? featureMask,
+            int degreeOfParallelism)
         {
             var decision = default(DecisionHolder?);
 
-            for (var dimensionIndex = 0; dimensionIndex < numberOfDimensions; dimensionIndex++)
+            if (degreeOfParallelism <= 1)
             {
-                if (featureMask != null && featureMask.Length > dimensionIndex && !featureMask[dimensionIndex])
+                for (var dimensionIndex = 0; dimensionIndex < numberOfDimensions; dimensionIndex++)
                 {
-                    // Skip if feature disabled by provided feature mask.
-                    continue;
-                }
+                    if (featureMask != null && featureMask.Length > dimensionIndex && !featureMask[dimensionIndex])
+                    {
+                        // Skip if feature disabled by provided feature mask.
+                        continue;
+                    }
 
-                var resultInDimension = SplitSingleDimension(data, classes, classListIndices, isRecordActive, dimensionIndex);
+                    var resultInDimension = SplitSingleDimension(data, classes, classListIndices, isRecordActive, dimensionIndex);
 
-                if (resultInDimension.HasValue && (!decision.HasValue || resultInDimension.Value.Score > decision.Value.Score))
-                {
-                    decision = resultInDimension;
+                    if (resultInDimension.HasValue && (!decision.HasValue || resultInDimension.Value.Score > decision.Value.Score))
+                    {
+                        decision = resultInDimension;
+                    }
                 }
+            }
+            else
+            {
+                var mutex = new object();
+                Parallel.For(
+                    0,
+                    numberOfDimensions,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = degreeOfParallelism
+                    },
+                    dimensionIndex =>
+                    {
+                        if (featureMask != null && featureMask.Length > dimensionIndex && !featureMask[dimensionIndex])
+                        {
+                            // Skip if feature disabled by provided feature mask.
+                            return;
+                        }
+
+                        var resultInDimension = SplitSingleDimension(data, classes, classListIndices, isRecordActive, dimensionIndex);
+
+                        lock (mutex)
+                        {
+                            if (resultInDimension.HasValue && (!decision.HasValue || resultInDimension.Value.Score > decision.Value.Score))
+                            {
+                                decision = resultInDimension;
+                            }
+                        }
+                    });
             }
 
             return decision;
@@ -120,14 +154,14 @@ namespace UglyToad.WiseOak
                 var rightGini = GiniImpurity.CalculateGiniImpurity(rightClassCounts);
 
                 var gain = giniImpurityRaw
-                           - ((leftTotal / (double) data.Length) * leftGini)
-                           - ((rightTotal / (double) data.Length) * rightGini);
+                           - ((leftTotal / (double)data.Length) * leftGini)
+                           - ((rightTotal / (double)data.Length) * rightGini);
 
                 if (gain > bestSplitScore)
                 {
                     bestSplitScore = gain;
                     bestSplitLocation = splitAt;
-                    
+
                     var (left, right) = GetBestClassForSplit(leftClassCounts, rightClassCounts, classListIndices);
                     bestLeft = left;
                     bestRight = right;
@@ -148,7 +182,7 @@ namespace UglyToad.WiseOak
                 return null;
             }
 
-            return new DecisionHolder(bestSplitLocation.Value, bestSplitScore, dimensionIndex,  bestLeft!.Value, bestRight!.Value);
+            return new DecisionHolder(bestSplitLocation.Value, bestSplitScore, dimensionIndex, bestLeft!.Value, bestRight!.Value);
         }
 
         private static (int leftClass, int rightClass) GetBestClassForSplit(int[] leftClassCounts, int[] rightClassCounts, Dictionary<int, int> classToIndexMap)

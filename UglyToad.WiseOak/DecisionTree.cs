@@ -127,7 +127,7 @@ namespace UglyToad.WiseOak
                 }
             }
 
-            var result = NodeSplitter.Split(classListIndices, numberOfDimensions, isRecordActive, data, classes, options.FeatureMask);
+            var result = NodeSplitter.Split(classListIndices, numberOfDimensions, isRecordActive, data, classes, options.FeatureMask, options.DegreeOfParalellism);
 
             if (result == null)
             {
@@ -165,6 +165,8 @@ namespace UglyToad.WiseOak
             public string[]? FeatureNames { get; set; }
 
             public uint? MaxDepth { get; set; }
+
+            public int DegreeOfParalellism { get; set; } = 1;
         }
     }
 }

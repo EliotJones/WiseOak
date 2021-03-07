@@ -118,7 +118,8 @@ namespace UglyToad.WiseOak.Tests.Unit
                         // Housing
                         {6, x => x == "yes" ? 1 : 0}
                     },
-                    DegreeOfParallelism = 4
+                    DegreeOfParallelism = 4,
+                    MaximumDepthToCheck = 8
                 });
 
                 Assert.NotNull(tree);
