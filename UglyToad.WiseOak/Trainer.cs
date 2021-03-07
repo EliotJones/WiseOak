@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace UglyToad.WiseOak
 {
@@ -101,53 +103,63 @@ namespace UglyToad.WiseOak
 
             var accuracies = new double[maxDepth];
 
-            for (var depth = 1; depth < maxDepth; depth++)
-            {
-                outputLog($"Beginning training for depth: {depth}.");
-
-                var accuraciesLocal = new List<double>(options.NumberOfFolds);
-
-                foreach (var fold in CrossValidationFoldFactory.Get(data, classes, options.NumberOfFolds))
+            Parallel.For(
+                1,
+                maxDepth,
+                new ParallelOptions
                 {
-                    outputLog($"   Train fold {accuraciesLocal.Count + 1} of {options.NumberOfFolds}.");
+                    MaxDegreeOfParallelism = 1
+                },
+                depth =>
+                {
+                    outputLog($"Beginning training for depth: {depth}.");
 
-                    var tree = DecisionTree.Build(fold.Train, fold.TrainClasses, new DecisionTree.Options
+                    var accuraciesLocal = new List<double>(options.NumberOfFolds);
+
+                    foreach (var fold in CrossValidationFoldFactory.Get(data, classes, options.NumberOfFolds))
                     {
-                        MaxDepth = (uint)depth
-                    });
+                        outputLog($"   Train fold {accuraciesLocal.Count + 1} of {options.NumberOfFolds}.");
 
-                    var wrong = 0;
-                    for (var testRecordIndex = 0; testRecordIndex < fold.Test.Length; testRecordIndex++)
-                    {
-                        var record = fold.Test[testRecordIndex];
-                        var expectedClass = fold.TestClasses[testRecordIndex];
+                        var tree = DecisionTree.Build(
+                            fold.Train,
+                            fold.TrainClasses,
+                            new DecisionTree.Options
+                            {
+                                MaxDepth = (uint) depth
+                            });
 
-                        var prediction = tree.Predict(record);
-
-                        if (prediction != expectedClass)
+                        var wrong = 0;
+                        for (var testRecordIndex = 0; testRecordIndex < fold.Test.Length; testRecordIndex++)
                         {
-                            wrong++;
+                            var record = fold.Test[testRecordIndex];
+                            var expectedClass = fold.TestClasses[testRecordIndex];
+
+                            var prediction = tree.Predict(record);
+
+                            if (prediction != expectedClass)
+                            {
+                                wrong++;
+                            }
                         }
+
+                        var accuracyOnFold = (fold.TestClasses.Length - wrong) / (double) fold.TestClasses.Length;
+
+                        outputLog($"      Accuracy was: {accuracyOnFold}.");
+
+                        accuraciesLocal.Add(accuracyOnFold);
                     }
 
-                    var accuracyOnFold = wrong / (double)fold.TestClasses.Length;
+                    var thisAccuracy = accuraciesLocal.Average();
+                    accuracies[depth - 1] = thisAccuracy;
 
-                    outputLog($"      Accuracy was: {accuracyOnFold}.");
+                    outputLog($"   Overall accuracy for depth {depth} was: {thisAccuracy}.");
 
-                    accuraciesLocal.Add(accuracyOnFold);
-                }
-
-                var thisAccuracy = accuraciesLocal.Average();
-                accuracies[depth - 1] = thisAccuracy;
-
-                outputLog($"   Overall accuracy for depth {depth} was: {thisAccuracy}.");
-
-                if (!bestAccuracy.HasValue || thisAccuracy > bestAccuracy.Value)
-                {
-                    bestAccuracy = thisAccuracy;
-                    bestDepth = depth;
-                }
-            }
+                    if (!bestAccuracy.HasValue || thisAccuracy > bestAccuracy.Value)
+                    {
+                        bestAccuracy = thisAccuracy;
+                        bestDepth = depth;
+                    }
+                });
 
             outputLog($"Best depth was {bestDepth} with accuracy: {bestAccuracy.GetValueOrDefault()}.");
 
@@ -186,39 +198,48 @@ namespace UglyToad.WiseOak
 
             var sizeOfFold = data.Length / numberOfFolds;
 
-            var trainData = new double[sizeOfFold * (numberOfFolds - 1)][];
-            var trainClasses = new int[trainData.Length];
-
-            var testData = new double[data.Length - trainData.Length][];
-            var testClasses = new int[testData.Length];
-
-            for (var i = 0; i < numberOfFolds; i++)
-            {
-                var skip = (sizeOfFold * i);
-                var take = testData.Length;
-
-                var testIndex = 0;
-                var trainIndex = 0;
-
-                for (var j = 0; j < data.Length; j++)
+            var results = new ConcurrentBag<Fold>();
+            Parallel.For(
+                0,
+                numberOfFolds,
+                i =>
                 {
-                    if (j >= skip && j < skip + take)
-                    {
-                        var myIndex = testIndex;
-                        testData[myIndex] = data[j];
-                        testClasses[myIndex] = classes[j];
-                        testIndex++;
-                    }
-                    else
-                    {
-                        var myIndex = trainIndex;
-                        trainData[myIndex] = data[j];
-                        trainClasses[myIndex] = classes[j];
-                        trainIndex++;
-                    }
-                }
+                    var trainData = new double[sizeOfFold * (numberOfFolds - 1)][];
+                    var trainClasses = new int[trainData.Length];
 
-                yield return new Fold(trainData, trainClasses, testData, testClasses);
+                    var testData = new double[data.Length - trainData.Length][];
+                    var testClasses = new int[testData.Length];
+
+                    var skip = (sizeOfFold * i);
+                    var take = testData.Length;
+
+                    var testIndex = 0;
+                    var trainIndex = 0;
+
+                    for (var j = 0; j < data.Length; j++)
+                    {
+                        if (j >= skip && j < skip + take)
+                        {
+                            var myIndex = testIndex;
+                            testData[myIndex] = data[j];
+                            testClasses[myIndex] = classes[j];
+                            testIndex++;
+                        }
+                        else
+                        {
+                            var myIndex = trainIndex;
+                            trainData[myIndex] = data[j];
+                            trainClasses[myIndex] = classes[j];
+                            trainIndex++;
+                        }
+                    }
+
+                    results.Add(new Fold(trainData, trainClasses, testData, testClasses));
+                });
+
+            foreach (var result in results)
+            {
+                yield return result;
             }
         }
 
