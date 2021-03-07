@@ -48,7 +48,8 @@ namespace UglyToad.WiseOak.Tests.Unit
                 1,
                 isRecordActive,
                 data,
-                classes);
+                classes,
+                null);
 
             Assert.NotNull(bestSplit);
             Assert.Equal(1.8, bestSplit.Value.SplitAt);

@@ -5,6 +5,8 @@ namespace UglyToad.WiseOak
 {
     public class DecisionTree
     {
+        internal static readonly DecisionTree Empty = new DecisionTree(null);
+
         public DecisionTreeNode? Root { get; }
 
         public bool IsEmpty => Root == null;
@@ -24,7 +26,7 @@ namespace UglyToad.WiseOak
             return Root!.Predict(data);
         }
 
-        public static DecisionTree Build(double[][] data, bool[] classes, uint? maximumDepth = null)
+        public static DecisionTree Build(double[][] data, bool[] classes, Options? options = null)
         {
             var classesInt = new int[classes.Length];
             for (var i = 0; i < classes.Length; i++)
@@ -32,10 +34,10 @@ namespace UglyToad.WiseOak
                 classesInt[i] = classes[i] ? 1 : 0;
             }
 
-            return Build(data, classesInt, maximumDepth);
+            return Build(data, classesInt, options);
         }
 
-        public static DecisionTree Build(double[][] data, int[] classes, uint? maximumDepth = null)
+        public static DecisionTree Build(double[][] data, int[] classes, Options? options = null)
         {
             if (data == null)
             {
@@ -52,7 +54,7 @@ namespace UglyToad.WiseOak
                 throw new ArgumentException($"The number of classes {classes.Length} does not match the number of observations {data.Length}.");
             }
 
-            if (maximumDepth == 0)
+            if (options?.MaxDepth == 0)
             {
                 return new DecisionTree(null);
             }
@@ -84,7 +86,7 @@ namespace UglyToad.WiseOak
 
             var decisions = new List<(DecisionHolder, bool)>();
 
-            var root = SplitRecursive(classListIndexes, numberOfDimensions, isActive, data, classes, maximumDepth, 0, decisions);
+            var root = SplitRecursive(classListIndexes, numberOfDimensions, isActive, data, classes, options ?? new Options(), 0, decisions);
 
             return new DecisionTree(root);
         }
@@ -94,11 +96,11 @@ namespace UglyToad.WiseOak
             bool[] isRecordActive,
             double[][] data,
             int[] classes,
-            uint? maximumDepth,
+            Options options,
             int currentDepth,
             List<(DecisionHolder decision, bool takeLeft)> previousDecisions)
         {
-            if (maximumDepth.HasValue && currentDepth >= maximumDepth)
+            if (currentDepth >= options.MaxDepth)
             {
                 return null;
             }
@@ -125,7 +127,7 @@ namespace UglyToad.WiseOak
                 }
             }
 
-            var result = NodeSplitter.Split(classListIndices, numberOfDimensions, isRecordActive, data, classes);
+            var result = NodeSplitter.Split(classListIndices, numberOfDimensions, isRecordActive, data, classes, options.FeatureMask);
 
             if (result == null)
             {
@@ -144,16 +146,25 @@ namespace UglyToad.WiseOak
                 (thisDecision, true)
             };
 
-            var left = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, maximumDepth, currentDepth + 1, nextLeft);
+            var left = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, options, currentDepth + 1, nextLeft);
 
             var nextRight = new List<(DecisionHolder, bool)>(previousDecisions)
             {
                 (thisDecision, false)
             };
 
-            var right = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, maximumDepth, currentDepth + 1, nextRight);
+            var right = SplitRecursive(classListIndices, numberOfDimensions, isRecordActive, data, classes, options, currentDepth + 1, nextRight);
 
             return new DecisionTreeNode(thisDecision.SplitAt, thisDecision.Score, thisDecision.DimensionIndex, thisDecision.LeftClass, thisDecision.RightClass, left, right);
+        }
+
+        public class Options
+        {
+            public bool[]? FeatureMask { get; set; }
+
+            public string[]? FeatureNames { get; set; }
+
+            public uint? MaxDepth { get; set; }
         }
     }
 }

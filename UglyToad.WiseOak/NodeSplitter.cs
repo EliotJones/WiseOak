@@ -10,12 +10,19 @@ namespace UglyToad.WiseOak
             int numberOfDimensions,
             bool[] isRecordActive,
             double[][] data,
-            int[] classes)
+            int[] classes,
+            bool[]? featureMask)
         {
             var decision = default(DecisionHolder?);
 
             for (var dimensionIndex = 0; dimensionIndex < numberOfDimensions; dimensionIndex++)
             {
+                if (featureMask != null && featureMask.Length > dimensionIndex && !featureMask[dimensionIndex])
+                {
+                    // Skip if feature disabled by provided feature mask.
+                    continue;
+                }
+
                 var resultInDimension = SplitSingleDimension(data, classes, classListIndices, isRecordActive, dimensionIndex);
 
                 if (resultInDimension.HasValue && (!decision.HasValue || resultInDimension.Value.Score > decision.Value.Score))
