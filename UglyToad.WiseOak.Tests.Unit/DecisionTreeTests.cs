@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using CsvSwan;
 using Xunit;
@@ -44,7 +46,7 @@ namespace UglyToad.WiseOak.Tests.Unit
         public void Build2dDataSet()
         {
             // Built by estimating from the sample set in https://victorzhou.com/blog/gini-impurity/#picking-the-best-split
-            var data = new []
+            var data = new[]
             {
                 // Class 1
                 new []{ 0.2, 1.5 },
@@ -77,8 +79,8 @@ namespace UglyToad.WiseOak.Tests.Unit
             Assert.Null(tree.Root.Left);
             Assert.Null(tree.Root.Right);
 
-            var predictionA = tree.Predict(new[] {0.7, 5});
-            var predictionB = tree.Predict(new[] {6, 0.3});
+            var predictionA = tree.Predict(new[] { 0.7, 5 });
+            var predictionB = tree.Predict(new[] { 6, 0.3 });
 
             Assert.Equal(1, predictionA);
             Assert.Equal(2, predictionB);
@@ -98,7 +100,26 @@ namespace UglyToad.WiseOak.Tests.Unit
             {
                 var rvs = csv.GetAllRowValues();
 
-                var tree = Trainer.Train(rvs, rvs[0].Count - 1);
+                var tree = Trainer.Train(rvs, rvs[0].Count - 1, new Trainer.Options
+                {
+                    StringToValueTransformerColumnMap = new Dictionary<int, Func<string, int>>
+                    {
+                        // Married
+                        {2, x =>
+                        {
+                            switch (x)
+                            {
+                                case "married":
+                                    return 1;
+                                default:
+                                    return 0;
+                            }
+                        }},
+                        // Housing
+                        {6, x => x == "yes" ? 1 : 0}
+                    },
+                    DegreeOfParallelism = 4
+                });
 
                 Assert.NotNull(tree);
                 Assert.NotNull(tree.Root);

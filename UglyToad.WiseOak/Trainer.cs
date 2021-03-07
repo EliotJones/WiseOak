@@ -60,7 +60,16 @@ namespace UglyToad.WiseOak
 
                         if (!enumToValMap.TryGetValue(value, out var enumValue))
                         {
-                            enumValue = enumToValMap.Count;
+                            if (options?.StringToValueTransformerColumnMap != null
+                            && options.StringToValueTransformerColumnMap.TryGetValue(colIndex, out var transformer))
+                            {
+                                enumValue = transformer(value);
+                            }
+                            else
+                            {
+                                enumValue = enumToValMap.Count;
+                            }
+
                             enumToValMap[value] = enumValue;
                         }
 
@@ -108,7 +117,7 @@ namespace UglyToad.WiseOak
                 maxDepth,
                 new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = 1
+                    MaxDegreeOfParallelism = options.DegreeOfParallelism
                 },
                 depth =>
                 {
@@ -118,7 +127,7 @@ namespace UglyToad.WiseOak
 
                     foreach (var fold in CrossValidationFoldFactory.Get(data, classes, options.NumberOfFolds))
                     {
-                        outputLog($"   Train fold {accuraciesLocal.Count + 1} of {options.NumberOfFolds}.");
+                        outputLog($"   D{depth} - Train fold {accuraciesLocal.Count + 1} of {options.NumberOfFolds}.");
 
                         var tree = DecisionTree.Build(
                             fold.Train,
@@ -144,7 +153,7 @@ namespace UglyToad.WiseOak
 
                         var accuracyOnFold = (fold.TestClasses.Length - wrong) / (double) fold.TestClasses.Length;
 
-                        outputLog($"      Accuracy was: {accuracyOnFold}.");
+                        outputLog($"      D{depth} - Accuracy was: {accuracyOnFold}.");
 
                         accuraciesLocal.Add(accuracyOnFold);
                     }
@@ -152,7 +161,7 @@ namespace UglyToad.WiseOak
                     var thisAccuracy = accuraciesLocal.Average();
                     accuracies[depth - 1] = thisAccuracy;
 
-                    outputLog($"   Overall accuracy for depth {depth} was: {thisAccuracy}.");
+                    outputLog($"   D{depth} - Overall accuracy for depth {depth} was: {thisAccuracy}.");
 
                     if (!bestAccuracy.HasValue || thisAccuracy > bestAccuracy.Value)
                     {
@@ -162,6 +171,9 @@ namespace UglyToad.WiseOak
                 });
 
             outputLog($"Best depth was {bestDepth} with accuracy: {bestAccuracy.GetValueOrDefault()}.");
+
+            var table = string.Join("\r\n", accuracies.Select((x, i) => $"{i + 1}\t{x}"));
+            outputLog($"Depth\tAccuracy");
 
             return DecisionTree.Build(data, classes, new DecisionTree.Options
             {
@@ -178,6 +190,8 @@ namespace UglyToad.WiseOak
             public Dictionary<int, Func<string, int>>? StringToValueTransformerColumnMap { get; set; }
 
             public int NumberOfFolds { get; set; } = 10;
+
+            public int DegreeOfParallelism { get; set; } = 1;
         }
     }
 
