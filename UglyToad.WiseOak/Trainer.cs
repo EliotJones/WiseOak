@@ -175,7 +175,7 @@ namespace UglyToad.WiseOak
             outputLog($"Best depth was {bestDepth} with accuracy: {bestAccuracy.GetValueOrDefault()}.");
 
             var table = string.Join("\r\n", accuracies.Select((x, i) => $"{i + 1}\t{x}"));
-            outputLog($"Depth\tAccuracy");
+            outputLog($"Depth\tAccuracy\r\n{table}");
 
             return DecisionTree.Build(data, classes, new DecisionTree.Options
             {
