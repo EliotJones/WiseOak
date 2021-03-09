@@ -116,7 +116,9 @@ namespace UglyToad.WiseOak.Tests.Unit
                             }
                         }},
                         // Housing
-                        {6, x => x == "yes" ? 1 : 0}
+                        {6, x => x == "yes" ? 1 : 0},
+                        // Zero out the duration feature since it is not known beforehand and is effectively a "cheat" feature since it correlates highly with class.
+                        {10, x => 0}
                     },
                     DegreeOfParallelism = 4,
                     MaximumDepthToCheck = 8
