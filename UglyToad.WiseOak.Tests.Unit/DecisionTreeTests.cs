@@ -123,7 +123,6 @@ namespace UglyToad.WiseOak.Tests.Unit
                     DegreeOfParallelism = 4,
                     MaximumDepthToCheck = 8
                 });
-
                 Assert.NotNull(tree);
                 Assert.NotNull(tree.Root);
             }
