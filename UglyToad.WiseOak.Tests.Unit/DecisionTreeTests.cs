@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 using CsvSwan;
 using Xunit;
 
@@ -125,6 +127,60 @@ namespace UglyToad.WiseOak.Tests.Unit
                 });
                 Assert.NotNull(tree);
                 Assert.NotNull(tree.Root);
+            }
+        }
+
+        [Fact]
+        public async Task IrisTestData()
+        {
+            var path = Path.Combine(Path.GetTempPath(), "iris-wise-oak.csv");
+
+            if (!File.Exists(path))
+            {
+                using (var client = new HttpClient())
+                {
+                    var response = await client.GetAsync("https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/sklearn/datasets/data/iris.csv");
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return;
+                    }
+
+                    await File.WriteAllTextAsync(path, await response.Content.ReadAsStringAsync());
+                }
+            }
+
+            using (var csv = Csv.Open(path, ',', true))
+            {
+                var allRows = csv.GetAllRowValues();
+
+                var tree = Trainer.Train(allRows, allRows[0].Count - 1, new Trainer.Options());
+
+                Assert.NotNull(tree.Root);
+
+                var wrong = 0;
+                var data = new double[allRows[0].Count - 1];
+                for (var i = 0; i < allRows.Count; i++)
+                {
+                    var row = allRows[i];
+                    for (var j = 0; j < row.Count - 1; j++)
+                    {
+                        data[j] = double.Parse(row[j]);
+                    }
+
+                    var expectedClass = int.Parse(row[^1]);
+
+                    var predicted = tree.Predict(data);
+
+                    if (predicted != expectedClass)
+                    {
+                        wrong++;
+                    }
+                }
+
+                var accuracy = 100 - ((wrong / (double) allRows.Count) * 100);
+
+                Assert.True(accuracy > 90, $"Accuracy on Iris dataset fell below 90%: {accuracy}%");
             }
         }
     }

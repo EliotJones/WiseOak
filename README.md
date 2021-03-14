@@ -48,3 +48,5 @@ var predictionClass2 = tree.Predict(new[] {6, 0.3});
 - https://www.kaggle.com/dmilla/introduction-to-decision-trees-titanic-dataset
 - https://en.wikipedia.org/wiki/Decision_tree_learning
 - https://victorzhou.com/blog/gini-impurity/
+- https://www.researchgate.net/publication/2796065_Optimal_Decision_Trees
+- https://www.researchgate.net/publication/344436515_Uncovering_Feature_Interdependencies_with_Non-Greedy_Random_Forests
