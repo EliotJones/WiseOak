@@ -4,6 +4,16 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <Description>Very simple decision tree library.</Description>
+    <RepositoryUrl>https://github.com/EliotJones/WiseOak</RepositoryUrl>
+    <PackageIconUrl>https://raw.githubusercontent.com/UglyToad/DataTable/master/uglytoadsmall.png</PackageIconUrl>
+    <PackageIcon>uglytoad.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/EliotJones/WiseOak</PackageProjectUrl>
+    <Version>0.0.1</Version>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="uglytoad.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>
